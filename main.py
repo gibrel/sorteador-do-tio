@@ -4,15 +4,16 @@ import random
 import json
 import customtkinter as ctk
 import pandas as pd
+import keyboard
 
-# Constantes
+# Constantes para os textos
 IMPORT_BUTTON_TEXT = "Importar"
 CLEAR_BUTTON_TEXT = "Limpar"
 EXPORT_FORMAT_DEFAULT = "-- SELECIONE --"
 EXPORT_FORMAT_OPTIONS = ["-- SELECIONE --", "JSON", "EXCEL"]
 EXPORT_BUTTON_TEXT = "Exportar"
 EXIT_BUTTON_TEXT = "Sair"
-RESUME_LABEL_TEXT = "OS IMPERIALISTAS SÃO APENAS TIGRES DE PAPEL"
+RESUME_LABEL_TEXT = "Resumo das Importações: "
 QUANTITY_LABEL_TEXT = "Quantidade:"
 PICK_BUTTON_TEXT = "Sortear"
 ERROR_TITLE = "Erro"
@@ -20,6 +21,11 @@ ERROR_INVALID_QUANTITY = "A quantidade inserida é inválida."
 ERROR_INVALID_EXPORT_FORMAT = "Selecione um formato de exportação válido."
 JSON_FILE_TYPE = [("Arquivo JSON", "*.json")]
 EXCEL_FILE_TYPE = [("Planilha Excel", "*.xlsx")]
+IMPORT_SHORTCUT = " (Ctrl+V)"
+EXPORT_SHORTCUT = " (Ctrl+S)"
+CLEAR_SHORTCUT = " (Ctrl+L)"
+EXIT_SHORTCUT = " (Ctrl+Q)"
+PICK_SHORTCUT = " (Ctrl+R)"
 
 ctk.set_default_color_theme("dark-blue")
 ctk.set_appearance_mode("system")
@@ -110,7 +116,42 @@ class App(ctk.CTk):
 
         self.bottom_elements_subframe.pack_configure(expand=True)
 
-    def import_names(self):
+        self.ctrl_pressed = False
+        self.update_button_shortcuts()
+
+        self.bind("<Control-v>", self.import_names)  # Ctrl+V para importar nomes
+        self.bind("<Control-s>", self.export_results)  # Ctrl+S para exportar resultados
+        self.bind("<Control-l>", self.clear_sheet)  # Ctrl+L para limpar a planilha
+        self.bind("<Control-q>", self.quit)  # Ctrl+Q para sair do programa
+        self.bind("<Control-r>", self.pick_names)  # Ctrl+R para sortear nomes
+
+        keyboard.on_press(self.handle_key_press)
+        keyboard.on_release(self.handle_key_release)
+
+    def handle_key_press(self, event):
+        if event.name == "ctrl":
+            self.ctrl_pressed = True
+            self.update_button_shortcuts()
+
+    def handle_key_release(self, event):
+        if event.name == "ctrl":
+            self.ctrl_pressed = False
+            self.update_button_shortcuts()
+
+    def update_button_shortcuts(self):
+        import_button_text = f"{IMPORT_BUTTON_TEXT} {IMPORT_SHORTCUT if self.ctrl_pressed else ''}"
+        export_button_text = f"{EXPORT_BUTTON_TEXT} {EXPORT_SHORTCUT if self.ctrl_pressed else ''}"
+        clear_button_text = f"{CLEAR_BUTTON_TEXT} {CLEAR_SHORTCUT if self.ctrl_pressed else ''}"
+        exit_button_text = f"{EXIT_BUTTON_TEXT} {EXIT_SHORTCUT if self.ctrl_pressed else ''}"
+        pick_button_text = f"{PICK_BUTTON_TEXT} {PICK_SHORTCUT if self.ctrl_pressed else ''}"
+
+        self.import_button.configure(text=import_button_text)
+        self.export_button.configure(text=export_button_text)
+        self.clear_button.configure(text=clear_button_text)
+        self.exit_button.configure(text=exit_button_text)
+        self.pick_button.configure(text=pick_button_text)
+
+    def import_names(self, event=None):
         clipboard_text = self.clipboard_get()
         names = clipboard_text.split("\n")
         new_entries = 0
@@ -129,12 +170,12 @@ class App(ctk.CTk):
                  f"Entradas repetidas: {repeated_entries} | "
                  f"Total de nomes: {new_entries + repeated_entries}")
 
-    def clear_sheet(self):
+    def clear_sheet(self, event=None):
         self.sheet_textbox.delete('1.0', ctk.END)
         self.results_textbox.delete('1.0', ctk.END)
         self.summary_label.configure(text=RESUME_LABEL_TEXT)
 
-    def pick_names(self):
+    def pick_names(self, event=None):
         quantity = self.quantity_entry.get()
         names_list = self.sheet_textbox.get("1.0", ctk.END).split("\n")
         names_list = [name.split("\t")[1] for name in names_list if name]
@@ -146,7 +187,7 @@ class App(ctk.CTk):
         else:
             messagebox.showerror(ERROR_TITLE, ERROR_INVALID_QUANTITY)
 
-    def export_results(self):
+    def export_results(self, event=None):
         export_format = self.export_format_var.get()
 
         if export_format == "JSON":
