@@ -29,6 +29,11 @@ EXPORT_SHORTCUT = " (Ctrl+S)"
 CLEAR_SHORTCUT = " (Ctrl+L)"
 EXIT_SHORTCUT = " (Ctrl+Q)"
 PICK_SHORTCUT = " (Ctrl+R)"
+BACKGROUND_IMG_PATH = "assets/wallpaper.jpg"
+COLOR_WHITE = "white"
+NEW_ENTRY_TEXT = "Novas entradas:"
+REPEATED_ENTRIES_TEXT = "Entradas repetidas:"
+TOTAL_ENTRIES_TEXT = "Total de entradas:"
 
 
 class App(QMainWindow):
@@ -38,7 +43,7 @@ class App(QMainWindow):
         self.setMinimumSize(800, 450)
         self.setMaximumSize(1600, 900)
 
-        self.bg_image = QImage("assets/wallpaper.jpg")
+        self.bg_image = QImage(BACKGROUND_IMG_PATH)
         self.bg_label = QLabel(self)
         self.bg_label.setPixmap(QPixmap.fromImage(self.bg_image))
         self.setCentralWidget(self.bg_label)
@@ -88,7 +93,7 @@ class App(QMainWindow):
         self.results_textbox = QTextEdit(self)
         self.center_layout.addWidget(self.results_textbox)
 
-        self.main_layout.addWidget(self.center_widget)
+        self.main_layout.addWidget(self.center_widget, 1)  # Definir esticamento para 1
 
     def create_bottom_bar(self):
         self.bottom_bar_widget = QWidget(self)
@@ -100,7 +105,7 @@ class App(QMainWindow):
 
         self.summary_label = QLabel(RESUME_LABEL_TEXT, self)
         summary_label_palette = self.summary_label.palette()
-        summary_label_palette.setColor(self.summary_label.foregroundRole(), QColor("white"))
+        summary_label_palette.setColor(self.summary_label.foregroundRole(), QColor(COLOR_WHITE))
         self.summary_label.setPalette(summary_label_palette)
         top_row_layout.addWidget(self.summary_label)
 
@@ -123,7 +128,7 @@ class App(QMainWindow):
 
         self.bottom_bar_layout.addWidget(bottom_row_widget)
 
-        self.main_layout.addWidget(self.bottom_bar_widget)
+        self.main_layout.addWidget(self.bottom_bar_widget, alignment=Qt.AlignBottom)  # Alinhar à parte inferior
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Control:
@@ -163,9 +168,9 @@ class App(QMainWindow):
                 repeated_entries += 1
 
         self.summary_label.setText(
-            f"Novas entradas: {new_entries} | "
-            f"Entradas repetidas: {repeated_entries} | "
-            f"Total de nomes: {new_entries + repeated_entries}"
+            f"{TOTAL_ENTRIES_TEXT} {new_entries} | "
+            f"{REPEATED_ENTRIES_TEXT} {repeated_entries} | "
+            f"{TOTAL_ENTRIES_TEXT} {new_entries + repeated_entries}"
         )
 
     def clear_sheet(self):
