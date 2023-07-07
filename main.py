@@ -1,140 +1,142 @@
-from tkinter import scrolledtext, messagebox, filedialog
-from PIL import Image
-import random
 import json
-import customtkinter as ctk
+import random
+import sys
+
 import pandas as pd
-import keyboard
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QImage, QPixmap, QColor
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QTextEdit, QVBoxLayout, QHBoxLayout,
+                             QPushButton, QComboBox, QFileDialog, QMessageBox)
 
 # Constantes para os textos
+APP_WINDOW_NAME = "Aplicativo de Sorteio"
 IMPORT_BUTTON_TEXT = "Importar"
 CLEAR_BUTTON_TEXT = "Limpar"
 EXPORT_FORMAT_DEFAULT = "-- SELECIONE --"
 EXPORT_FORMAT_OPTIONS = ["-- SELECIONE --", "JSON", "EXCEL"]
 EXPORT_BUTTON_TEXT = "Exportar"
 EXIT_BUTTON_TEXT = "Sair"
-RESUME_LABEL_TEXT = "Resumo das Importações: "
+RESUME_LABEL_TEXT = "OS IMPERIALISTAS SÃO TIGRES DE PAPEL"
 QUANTITY_LABEL_TEXT = "Quantidade:"
 PICK_BUTTON_TEXT = "Sortear"
 ERROR_TITLE = "Erro"
 ERROR_INVALID_QUANTITY = "A quantidade inserida é inválida."
 ERROR_INVALID_EXPORT_FORMAT = "Selecione um formato de exportação válido."
-JSON_FILE_TYPE = [("Arquivo JSON", "*.json")]
-EXCEL_FILE_TYPE = [("Planilha Excel", "*.xlsx")]
+JSON_FILE_TYPE = "Arquivo JSON (*.json)"
+EXCEL_FILE_TYPE = "Planilha Excel (*.xlsx)"
 IMPORT_SHORTCUT = " (Ctrl+V)"
 EXPORT_SHORTCUT = " (Ctrl+S)"
 CLEAR_SHORTCUT = " (Ctrl+L)"
 EXIT_SHORTCUT = " (Ctrl+Q)"
 PICK_SHORTCUT = " (Ctrl+R)"
+BACKGROUND_IMG_PATH = "assets/wallpaper.jpg"
+COLOR_WHITE = "white"
+NEW_ENTRY_TEXT = "Novas entradas:"
+REPEATED_ENTRIES_TEXT = "Entradas repetidas:"
+TOTAL_ENTRIES_TEXT = "Total de entradas:"
 
-ctk.set_default_color_theme("dark-blue")
-ctk.set_appearance_mode("system")
 
-
-class App(ctk.CTk):
+class App(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.title("Aplicativo de Sorteio")
-        self.geometry("800x600")
+        self.setWindowTitle(APP_WINDOW_NAME)
+        self.setMinimumSize(800, 450)
+        self.setMaximumSize(1600, 900)
 
-        # load and create background image
-        self.bg_image = ctk.CTkImage(
-            Image.open("assets/mao-zedong.jpg"),
-            size=(1600, 900))
+        self.bg_image = QImage(BACKGROUND_IMG_PATH)
+        self.bg_label = QLabel(self)
+        self.bg_label.setPixmap(QPixmap.fromImage(self.bg_image))
+        self.setCentralWidget(self.bg_label)
 
-        self.background_label = ctk.CTkLabel(self, image=self.bg_image)
-        self.background_label.place(x=0, y=0, relwidth=1, relheight=1)
+        self.main_layout = QVBoxLayout(self.bg_label)
 
-        self.top_bar = ctk.CTkFrame(self)
-        self.top_bar.pack(side=ctk.TOP, fill=ctk.X, padx=5, pady=5)
-
-        self.import_button = ctk.CTkButton(
-            self.top_bar, text=IMPORT_BUTTON_TEXT,
-            command=self.import_names)
-        self.import_button.pack(side=ctk.LEFT, padx=5, pady=5)
-
-        self.clear_button = ctk.CTkButton(
-            self.top_bar,
-            text=CLEAR_BUTTON_TEXT,
-            command=self.clear_sheet)
-        self.clear_button.pack(side=ctk.LEFT, padx=5, pady=5)
-
-        self.export_format_var = ctk.StringVar()
-        self.export_format_var.set(EXPORT_FORMAT_DEFAULT)
-
-        self.export_dropdown = ctk.CTkOptionMenu(
-            self.top_bar,
-            variable=self.export_format_var,
-            values=EXPORT_FORMAT_OPTIONS)
-        self.export_dropdown.pack(side=ctk.LEFT, padx=5, pady=5)
-
-        self.export_button = ctk.CTkButton(
-            self.top_bar,
-            text=EXPORT_BUTTON_TEXT,
-            command=self.export_results)
-        self.export_button.pack(side=ctk.LEFT, padx=5, pady=5)
-
-        self.exit_button = ctk.CTkButton(
-            self.top_bar,
-            text=EXIT_BUTTON_TEXT,
-            command=self.quit)
-        self.exit_button.pack(side=ctk.RIGHT, padx=5, pady=5)
-
-        self.center_frame = ctk.CTkFrame(self)
-        self.center_frame.pack(fill=ctk.BOTH, expand=True, padx=5, pady=5)
-
-        self.sheet_textbox = scrolledtext.ScrolledText(self.center_frame, width=40, height=10)
-        self.sheet_textbox.pack(side=ctk.LEFT, padx=5, pady=5, fill=ctk.BOTH, expand=True)
-
-        self.results_textbox = scrolledtext.ScrolledText(self.center_frame, width=40, height=10)
-        self.results_textbox.pack(side=ctk.LEFT, padx=5, pady=5, fill=ctk.BOTH, expand=True)
-
-        self.bottom_bar = ctk.CTkFrame(self)
-        self.bottom_bar.pack(side=ctk.BOTTOM, fill=ctk.X, padx=5, pady=5)
-
-        self.summary_label = ctk.CTkLabel(
-            self.bottom_bar,
-            text=RESUME_LABEL_TEXT)
-        self.summary_label.pack()
-
-        self.bottom_elements_subframe = ctk.CTkFrame(self.bottom_bar)
-        self.bottom_elements_subframe.pack()
-
-        self.quantity_label = ctk.CTkLabel(
-            self.bottom_elements_subframe,
-            text=QUANTITY_LABEL_TEXT)
-        self.quantity_label.pack(side=ctk.LEFT)
-
-        self.quantity_entry = ctk.CTkEntry(self.bottom_elements_subframe)
-        self.quantity_entry.pack(side=ctk.LEFT)
-
-        self.pick_button = ctk.CTkButton(
-            self.bottom_elements_subframe,
-            text=PICK_BUTTON_TEXT,
-            command=self.pick_names)
-        self.pick_button.pack(side=ctk.LEFT)
-
-        self.bottom_elements_subframe.pack_configure(expand=True)
+        self.create_top_bar()
+        self.create_center()
+        self.create_bottom_bar()
 
         self.ctrl_pressed = False
         self.update_button_shortcuts()
 
-        self.bind("<Control-v>", self.import_names)  # Ctrl+V para importar nomes
-        self.bind("<Control-s>", self.export_results)  # Ctrl+S para exportar resultados
-        self.bind("<Control-l>", self.clear_sheet)  # Ctrl+L para limpar a planilha
-        self.bind("<Control-q>", self.quit)  # Ctrl+Q para sair do programa
-        self.bind("<Control-r>", self.pick_names)  # Ctrl+R para sortear nomes
+    def create_top_bar(self):
+        self.top_bar_widget = QWidget(self)
+        self.top_bar_layout = QHBoxLayout(self.top_bar_widget)
 
-        keyboard.on_press(self.handle_key_press)
-        keyboard.on_release(self.handle_key_release)
+        self.import_button = QPushButton(IMPORT_BUTTON_TEXT, self)
+        self.top_bar_layout.addWidget(self.import_button)
+        self.import_button.clicked.connect(self.import_names)
 
-    def handle_key_press(self, event):
-        if event.name == "ctrl":
+        self.clear_button = QPushButton(CLEAR_BUTTON_TEXT, self)
+        self.top_bar_layout.addWidget(self.clear_button)
+        self.clear_button.clicked.connect(self.clear_sheet)
+
+        self.export_dropdown = QComboBox(self)
+        self.export_dropdown.addItems(EXPORT_FORMAT_OPTIONS)
+        self.top_bar_layout.addWidget(self.export_dropdown)
+
+        self.export_button = QPushButton(EXPORT_BUTTON_TEXT, self)
+        self.top_bar_layout.addWidget(self.export_button)
+        self.export_button.clicked.connect(self.export_results)
+
+        self.exit_button = QPushButton(EXIT_BUTTON_TEXT, self)
+        self.top_bar_layout.addWidget(self.exit_button)
+        self.exit_button.clicked.connect(self.close)
+
+        self.main_layout.addWidget(self.top_bar_widget)
+
+    def create_center(self):
+        self.center_widget = QWidget(self)
+        self.center_layout = QHBoxLayout(self.center_widget)
+
+        self.sheet_textbox = QTextEdit(self)
+        self.center_layout.addWidget(self.sheet_textbox)
+
+        self.results_textbox = QTextEdit(self)
+        self.center_layout.addWidget(self.results_textbox)
+
+        self.main_layout.addWidget(self.center_widget, 1)  # Definir esticamento para 1
+
+    def create_bottom_bar(self):
+        self.bottom_bar_widget = QWidget(self)
+        self.bottom_bar_layout = QVBoxLayout(self.bottom_bar_widget)
+
+        # Top Row
+        top_row_widget = QWidget(self)
+        top_row_layout = QHBoxLayout(top_row_widget)
+
+        self.summary_label = QLabel(RESUME_LABEL_TEXT, self)
+        summary_label_palette = self.summary_label.palette()
+        summary_label_palette.setColor(self.summary_label.foregroundRole(), QColor(COLOR_WHITE))
+        self.summary_label.setPalette(summary_label_palette)
+        top_row_layout.addWidget(self.summary_label)
+
+        self.bottom_bar_layout.addWidget(top_row_widget)
+
+        # Bottom Row
+        bottom_row_widget = QWidget(self)
+        bottom_row_layout = QHBoxLayout(bottom_row_widget)
+
+        self.quantity_label = QLabel(QUANTITY_LABEL_TEXT, self)
+        bottom_row_layout.addWidget(self.quantity_label)
+
+        self.quantity_entry = QTextEdit(self)
+        self.quantity_entry.setMaximumHeight(30)  # Adjust the height as needed
+        bottom_row_layout.addWidget(self.quantity_entry)
+
+        self.pick_button = QPushButton(PICK_BUTTON_TEXT, self)
+        bottom_row_layout.addWidget(self.pick_button)
+        self.pick_button.clicked.connect(self.pick_names)
+
+        self.bottom_bar_layout.addWidget(bottom_row_widget)
+
+        self.main_layout.addWidget(self.bottom_bar_widget, alignment=Qt.AlignBottom)  # Alinhar à parte inferior
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Control:
             self.ctrl_pressed = True
             self.update_button_shortcuts()
 
-    def handle_key_release(self, event):
-        if event.name == "ctrl":
+    def keyReleaseEvent(self, event):
+        if event.key() == Qt.Key_Control:
             self.ctrl_pressed = False
             self.update_button_shortcuts()
 
@@ -145,84 +147,93 @@ class App(ctk.CTk):
         exit_button_text = f"{EXIT_BUTTON_TEXT} {EXIT_SHORTCUT if self.ctrl_pressed else ''}"
         pick_button_text = f"{PICK_BUTTON_TEXT} {PICK_SHORTCUT if self.ctrl_pressed else ''}"
 
-        self.import_button.configure(text=import_button_text)
-        self.export_button.configure(text=export_button_text)
-        self.clear_button.configure(text=clear_button_text)
-        self.exit_button.configure(text=exit_button_text)
-        self.pick_button.configure(text=pick_button_text)
+        self.import_button.setText(import_button_text)
+        self.export_button.setText(export_button_text)
+        self.clear_button.setText(clear_button_text)
+        self.exit_button.setText(exit_button_text)
+        self.pick_button.setText(pick_button_text)
 
-    def import_names(self, event=None):
-        clipboard_text = self.clipboard_get()
+    def import_names(self):
+        clipboard_text = QApplication.clipboard().text()
         names = clipboard_text.split("\n")
         new_entries = 0
         repeated_entries = 0
 
         for name in names:
             name = name.strip()
-            if name and not any(name in entry for entry in self.sheet_textbox.get("1.0", ctk.END).split("\n")):
+            if name and not any(name in entry for entry in self.sheet_textbox.toPlainText().split("\n")):
                 new_entries += 1
-                self.sheet_textbox.insert(ctk.END, f"ID: {new_entries}\tNome: {name}\n")
+                self.sheet_textbox.append(f"ID: {new_entries}\tNome: {name}")
             elif name:
                 repeated_entries += 1
 
-        self.summary_label.configure(
-            text=f"Novas entradas: {new_entries} | "
-                 f"Entradas repetidas: {repeated_entries} | "
-                 f"Total de nomes: {new_entries + repeated_entries}")
+        self.summary_label.setText(
+            f"{TOTAL_ENTRIES_TEXT} {new_entries} | "
+            f"{REPEATED_ENTRIES_TEXT} {repeated_entries} | "
+            f"{TOTAL_ENTRIES_TEXT} {new_entries + repeated_entries}"
+        )
 
-    def clear_sheet(self, event=None):
-        self.sheet_textbox.delete('1.0', ctk.END)
-        self.results_textbox.delete('1.0', ctk.END)
-        self.summary_label.configure(text=RESUME_LABEL_TEXT)
+    def clear_sheet(self):
+        self.sheet_textbox.clear()
+        self.results_textbox.clear()
+        self.summary_label.setText(RESUME_LABEL_TEXT)
 
-    def pick_names(self, event=None):
-        quantity = self.quantity_entry.get()
-        names_list = self.sheet_textbox.get("1.0", ctk.END).split("\n")
+    def pick_names(self):
+        quantity = self.quantity_entry.toPlainText()
+        names_list = self.sheet_textbox.toPlainText().split("\n")
         names_list = [name.split("\t")[1] for name in names_list if name]
 
         if quantity.isdigit() and int(quantity) <= len(names_list):
             results = random.sample(names_list, int(quantity))
-            self.results_textbox.delete('1.0', ctk.END)
-            self.results_textbox.insert(ctk.END, "\n".join(results))
+            self.results_textbox.clear()
+            self.results_textbox.append("\n".join(results))
         else:
-            messagebox.showerror(ERROR_TITLE, ERROR_INVALID_QUANTITY)
+            QMessageBox.critical(self, ERROR_TITLE, ERROR_INVALID_QUANTITY)
 
-    def export_results(self, event=None):
-        export_format = self.export_format_var.get()
+    def export_results(self):
+        export_format = self.export_dropdown.currentText()
 
         if export_format == "JSON":
             self.export_to_json()
         elif export_format == "EXCEL":
             self.export_to_excel()
         else:
-            messagebox.showerror(ERROR_TITLE, ERROR_INVALID_EXPORT_FORMAT)
+            QMessageBox.critical(self, ERROR_TITLE, ERROR_INVALID_EXPORT_FORMAT)
 
     def export_to_json(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".json", filetypes=JSON_FILE_TYPE)
+        file_dialog = QFileDialog(self)
+        file_dialog.setDefaultSuffix("json")
+        file_path, _ = file_dialog.getSaveFileName(
+            self, "Salvar como", "", JSON_FILE_TYPE
+        )
 
         if file_path:
-            results = self.results_textbox.get("1.0", ctk.END).splitlines()
-            results_dict = {}
+            results = self.results_textbox.toPlainText().split("\n")
+            results = [result.strip() for result in results if result]
+            data = {"results": results}
 
-            for index, result in enumerate(results):
-                results_dict[index + 1] = result
-
-            with open(file_path, "w") as json_file:
-                json.dump(results_dict, json_file, indent=4)
+            with open(file_path, "w") as file:
+                json.dump(data, file)
 
     def export_to_excel(self):
-        file_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=EXCEL_FILE_TYPE)
+        file_dialog = QFileDialog(self)
+        file_dialog.setDefaultSuffix("xlsx")
+        file_path, _ = file_dialog.getSaveFileName(
+            self, "Salvar como", "", EXCEL_FILE_TYPE
+        )
 
         if file_path:
-            results = self.results_textbox.get("1.0", ctk.END).splitlines()
-            results_list = []
+            results = self.results_textbox.toPlainText().split("\n")
+            results = [result.strip() for result in results if result]
+            data = {"results": results}
+            df = pd.DataFrame(data)
 
-            for result in results:
-                results_list.append({"Resultado": result})
-
-            df = pd.DataFrame(results_list)
-            df.to_excel(file_path, index=False, engine="openpyxl")
+            with pd.ExcelWriter(file_path) as writer:
+                df.to_excel(writer, index=False)
 
 
-app = App()
-app.mainloop()
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = App()
+    window.show()
+    sys.exit(app.exec_())
