@@ -6,7 +6,8 @@ import pandas as pd
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QImage, QPixmap, QColor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QTextEdit, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QComboBox, QFileDialog, QMessageBox)
+                             QPushButton, QComboBox, QFileDialog, QMessageBox, QTableWidget, QTableWidgetItem,
+                             QHeaderView)
 
 # Constantes para os textos
 APP_WINDOW_NAME = "Aplicativo de Sorteio"
@@ -58,6 +59,8 @@ class App(QMainWindow):
         self.setCentralWidget(self.bg_label)
 
         self.main_layout = QVBoxLayout(self.bg_label)
+
+        self.imported_names = set()
 
         self.create_top_bar()
         self.create_center()
@@ -116,13 +119,23 @@ class App(QMainWindow):
         self.center_widget = QWidget(self)
         self.center_layout = QHBoxLayout(self.center_widget)
 
-        self.sheet_textbox = QTextEdit(self)
-        self.sheet_textbox.setStyleSheet("background-color: white; color: black;")
-        self.center_layout.addWidget(self.sheet_textbox)
+        self.sheet_table = QTableWidget(self)
+        self.sheet_table.setColumnCount(2)
+        self.sheet_table.setHorizontalHeaderLabels([COLUMN_ID, COLUMN_NAME])
+        self.sheet_table.setStyleSheet("background-color: white; color: black;")
+        self.center_layout.addWidget(self.sheet_table)
 
-        self.results_textbox = QTextEdit(self)
-        self.results_textbox.setStyleSheet("background-color: white; color: black;")
-        self.center_layout.addWidget(self.results_textbox)
+        self.results_table = QTableWidget(self)
+        self.results_table.setColumnCount(1)
+        self.results_table.setHorizontalHeaderLabels(["Resultado"])
+        self.results_table.setStyleSheet("background-color: white; color: black;")
+        self.center_layout.addWidget(self.results_table)
+
+        self.center_layout.setContentsMargins(10, 10, 10, 10)
+        self.center_layout.setSpacing(5)
+
+        self.sheet_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.results_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.main_layout.addWidget(self.center_widget, 1)
 
@@ -197,11 +210,18 @@ class App(QMainWindow):
         new_entries = 0
         repeated_entries = 0
 
+        row = 0
         for name in names:
             name = name.strip()
-            if name and not any(name in entry for entry in self.sheet_textbox.toPlainText().split(EK_LINE_BREAK)):
+            if name and name not in self.imported_names:
                 new_entries += 1
-                self.sheet_textbox.append(f"{COLUMN_ID}: {new_entries}\t{COLUMN_NAME}: {name}")
+                id_item = QTableWidgetItem(str(new_entries))
+                name_item = QTableWidgetItem(name)
+                self.sheet_table.insertRow(row)
+                self.sheet_table.setItem(row, 0, id_item)
+                self.sheet_table.setItem(row, 1, name_item)
+                self.imported_names.add(name)
+                row += 1
             elif name:
                 repeated_entries += 1
 
@@ -212,19 +232,23 @@ class App(QMainWindow):
         )
 
     def clear_sheet(self):
-        self.sheet_textbox.clear()
-        self.results_textbox.clear()
+        self.sheet_table.clearContents()
+        self.sheet_table.setRowCount(0)
+        self.results_table.clearContents()
+        self.results_table.setRowCount(0)
         self.summary_label.setText(RESUME_LABEL_TEXT)
 
     def pick_names(self):
         quantity = self.quantity_entry.toPlainText()
-        names_list = self.sheet_textbox.toPlainText().split(EK_LINE_BREAK)
-        names_list = [name.split(EK_TAB)[1] for name in names_list if name]
+        names_list = [self.sheet_table.item(row, 1).text() for row in range(self.sheet_table.rowCount())]
 
         if quantity.isdigit() and int(quantity) <= len(names_list):
             results = random.sample(names_list, int(quantity))
-            self.results_textbox.clear()
-            self.results_textbox.append(EK_LINE_BREAK.join(results))
+            self.results_table.clearContents()
+            self.results_table.setRowCount(len(results))
+            for i, result in enumerate(results):
+                result_item = QTableWidgetItem(result)
+                self.results_table.setItem(i, 0, result_item)
         else:
             QMessageBox.critical(self, ERROR_TITLE, ERROR_INVALID_QUANTITY)
 
@@ -246,12 +270,13 @@ class App(QMainWindow):
         )
 
         if file_path:
-            results = self.results_textbox.toPlainText().split(EK_LINE_BREAK)
+            results = [self.results_table.item(row, 0).text() for row in range(self.results_table.rowCount())]
             results = [result.strip() for result in results if result]
             data = {"results": results}
 
             with open(file_path, "w") as file:
                 json.dump(data, file)
+
 
     def export_to_excel(self):
         file_dialog = QFileDialog(self)
@@ -261,7 +286,7 @@ class App(QMainWindow):
         )
 
         if file_path:
-            results = self.results_textbox.toPlainText().split(EK_LINE_BREAK)
+            results = [self.results_table.item(row, 0).text() for row in range(self.results_table.rowCount())]
             results = [result.strip() for result in results if result]
             data = {"results": results}
             df = pd.DataFrame(data)
